@@ -6,17 +6,21 @@ const bodyParser = require('body-parser')
 const multer = require('multer')
 
 const feedRoutes = require('./routes/feed')
+const authRoutes = require('./routes/auth')
 
 const app = express();
 
-const { v4: uuidv4 } = require('uuid');
+const {
+    v4: uuidv4
+} = require('uuid');
 
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'images')
     },
     filename: (req, file, cb) => {
-        cb(null, uuidv4())
+        const extension = file.mimetype.split('/')[1]
+        cb(null, `${uuidv4()}.${extension}`)
     }
 })
 
@@ -35,7 +39,10 @@ const fileFilter = (req, file, cb) => {
 app.use(bodyParser.json()); // application/json
 // fileStorage
 app.use(
-    multer({storage: fileStorage, fileFilter: fileFilter}).single('image')
+    multer({
+        storage: fileStorage,
+        fileFilter: fileFilter
+    }).single('image')
 );
 
 app.use('/images', express.static(path.join(__dirname, 'images')));
@@ -49,12 +56,18 @@ app.use((req, res, next) => {
 })
 
 app.use('/feed', feedRoutes)
+app.use('/auth', authRoutes)
 
 app.use((error, req, res, next) => {
-    const status = error.statusCode
-    const message = error.message
+    let status = error.statusCode;
+    if (!status) {
+       status = 500; 
+    }
+    const message = error.message;
+    const data = error.data;
     res.status(status).json({
-        message: message
+        message: message,
+        data: data
     })
 })
 
