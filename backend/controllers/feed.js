@@ -5,6 +5,8 @@ const {
     validationResult
 } = require('express-validator')
 
+const io = require('../socket')
+
 const {
     PrismaClient
 } = require('@prisma/client')
@@ -19,6 +21,9 @@ exports.getPosts = async (req, res, next) => {
     const posts = await prisma.post.findMany({
         include: {
             creator: true
+        },
+        orderBy: {
+            createdAt: 'desc'
         },
         take: perPage,
         skip: (currentPage - 1) * perPage
@@ -61,6 +66,10 @@ exports.createPost = async (req, res, next) => {
             include: {
                 creator: true
             }
+        })
+        io.getIO().emit('posts', {
+            action: 'create',
+            post: newPost
         })
         res.status(201).json({
             message: "Utworzono post!",
@@ -159,6 +168,10 @@ exports.updatePost = async (req, res, next) => {
                 creator: true
             }
         })
+        io.getIO().emit('posts', {
+            action: 'update',
+            post: post
+        })
         return res.status(200).json({
             message: 'Post zaktualizowany',
             post: post
@@ -198,6 +211,10 @@ exports.deletePost = async (req, res, next) => {
     })
 
     clearImage(postDelete.imageUrl)
+    io.getIO().emit('posts', {
+        action: 'delete',
+        post: postDelete.id
+    })
     res.status(200).json({
         message: 'Post został usunięty'
     })
